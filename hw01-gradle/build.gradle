@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+dependencies {
+    implementation 'com.google.guava:guava'
+}
+
+shadowJar {
+    archiveBaseName.set('толстый-jar')
+    archiveClassifier.set('')
+    manifest {
+        attributes 'Main-Class': 'ru.otus.HelloOtus'
+    }
+}
+
+tasks.build.dependsOn tasks.shadowJar
