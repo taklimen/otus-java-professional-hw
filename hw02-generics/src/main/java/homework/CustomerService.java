@@ -23,8 +23,8 @@ public class CustomerService {
         return wrapValue(smallestEntry);
     }
 
-    private static AbstractMap.SimpleEntry<Customer, String> wrapValue(Map.Entry<Customer, String> smallestEntry) {
-        return new AbstractMap.SimpleEntry<>(new Customer(smallestEntry.getKey()), smallestEntry.getValue());
+    private static AbstractMap.SimpleEntry<Customer, String> wrapValue(Map.Entry<Customer, String> entry) {
+        return new AbstractMap.SimpleEntry<>(new Customer(entry.getKey()), entry.getValue());
     }
 
     public Map.Entry<Customer, String> getNext(Customer customer) {
