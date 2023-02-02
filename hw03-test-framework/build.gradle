@@ -1,12 +1,14 @@
 plugins {
     id 'java'
     id 'application'
+    id 'io.freefair.lombok'
 }
 
 sourceCompatibility = JavaVersion.VERSION_17
 targetCompatibility = JavaVersion.VERSION_17
 
 dependencies {
+
 }
 
 application {

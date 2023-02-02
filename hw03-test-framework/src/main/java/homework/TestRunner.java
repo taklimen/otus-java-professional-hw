@@ -3,6 +3,8 @@ package homework;
 import homework.annotations.After;
 import homework.annotations.Before;
 import homework.annotations.Test;
+import homework.annotations.TestResult;
+import homework.annotations.TestStats;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -11,7 +13,8 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 class TestRunner {
@@ -45,40 +48,62 @@ class TestRunner {
             return;
         }
 
-        AtomicInteger testsRun = new AtomicInteger();
-        AtomicInteger testsPassed = new AtomicInteger();
-        AtomicInteger testsFailed = new AtomicInteger();
-        AtomicInteger testsWithException = new AtomicInteger();
-        AtomicInteger testsWithReflectionException = new AtomicInteger();
+        TestStats stats = tests.stream()
+                .map(test -> runTest(before, after, constructor, test))
+                .reduce(sumStats())
+                .orElse(new TestStats());
 
-        tests.parallelStream().forEach(test -> {
+        stats.printStats();
+    }
+
+    private static BinaryOperator<TestStats> sumStats() {
+        return (stat1, stat2) -> new TestStats()
+                .setTestsRun(stat1.getTestsRun() + stat2.getTestsRun())
+                .setTestsFailed(stat1.getTestsFailed() + stat2.getTestsFailed())
+                .setTestsPassed(stat1.getTestsPassed() + stat2.getTestsPassed())
+                .setTestsWithException(stat1.getTestsWithException() + stat2.getTestsWithException())
+                .setTestsWithReflectionException(stat1.getTestsWithReflectionException() + stat2.getTestsWithReflectionException());
+    }
+
+    private static TestStats runTest(Method before, Method after, Constructor<?> constructor, Method test) {
+        Runnable cleanup = () -> {
+        };
+        TestStats stats;
+        try {
+            var testClassInstance = constructor.newInstance();
+            runBefore(before, testClassInstance);
+            cleanup = () -> runAfter(after, testClassInstance);
+            test.invoke(testClassInstance);
+            stats = TestStats.createStats(TestResult.TEST_PASS);
+        } catch (InvocationTargetException e) {
             try {
-                testsRun.incrementAndGet();
-
-                var testClassInstanse = constructor.newInstance();
-                if (Objects.nonNull(before)) before.invoke(testClassInstanse);
-                test.invoke(testClassInstanse);
-                if (Objects.nonNull(after)) after.invoke(testClassInstanse);
-
-                testsPassed.incrementAndGet();
-            } catch (InvocationTargetException e) {
-                try {
-                    throw e.getTargetException();
-                } catch (AssertionError ex) {
-                    testsFailed.incrementAndGet();
-                } catch (Throwable ex) {
-                    testsWithException.incrementAndGet();
-                }
-            } catch (InstantiationException | IllegalAccessException e) {
-                testsWithReflectionException.incrementAndGet();
+                throw e.getTargetException();
+            } catch (AssertionError ex) {
+                stats = TestStats.createStats(TestResult.TEST_FAIL);
+            } catch (Throwable ex) {
+                stats = TestStats.createStats(TestResult.TEST_EXCEPTION);
             }
-        });
-        System.out.println("Tests run: " + testsRun.get());
-        System.out.println("Tests passed: " + testsPassed.get());
-        System.out.println("Total tests failed: " + (testsFailed.get() + testsWithException.get() +
-                testsWithReflectionException.get()));
-        System.out.println("Failed with exception: " + testsWithException.get());
-        System.out.println("Failed with reflection error: " + testsWithReflectionException.get());
+        } catch (InstantiationException | IllegalAccessException e) {
+            stats = TestStats.createStats(TestResult.TEST_REFLECTION_EXCEPTION);
+        }
+        cleanup.run();
+        return stats;
+    }
+
+    private static void runBefore(Method before, Object testClassInstanse) throws InvocationTargetException, IllegalAccessException {
+        if (Objects.nonNull(before))
+            before.invoke(testClassInstanse);
+    }
+
+    private static void runAfter(Method method, Object testClassInstanse) {
+        Optional.ofNullable(method)
+                .ifPresent(method1 -> {
+                    try {
+                        method.invoke(testClassInstanse);
+                    } catch (Exception e) {
+                        System.out.println("Exception in method annotated with @After");
+                    }
+                });
     }
 
     private static List<Method> findMethodsWithAnnotation(Method[] methods, Class<? extends Annotation> annotationClass) {
