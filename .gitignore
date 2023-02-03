@@ -36,5 +36,3 @@ nb-configuration.xml
 .env
 
 out/
-
-logs/
