@@ -1,4 +1,4 @@
-package homework.annotations;
+package homework;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package homework.annotations;
+package homework;
 
 public enum TestResult {
     TEST_PASS,
